@@ -1,0 +1,33 @@
+{
+	"name": "dg/composer-frontline",
+	"type": "composer-plugin",
+	"description": "Composer Frontline: updates all the version constraints in the composer.json file to latest version",
+	"keywords": ["composer"],
+	"license": ["BSD-3-Clause"],
+	"authors": [
+		{
+			"name": "David Grudl",
+			"homepage": "https://davidgrudl.com"
+		}
+	],
+	"require": {
+		"php": ">=7.1",
+		"composer-plugin-api": "^1.0 || ^2.0"
+	},
+	"require-dev": {
+		"composer/composer": "^1.10 || ^2.0",
+		"nette/tester": "^2.2",
+		"phpstan/phpstan": "^0.12",
+		"symfony/console": "^5.1"
+	},
+	"autoload": {
+		"classmap": ["src/"]
+	},
+	"scripts": {
+		"phpstan": "phpstan analyse",
+		"tester": "tester tests -s"
+	},
+	"extra": {
+		"class": "DG\\ComposerFrontline\\Plugin"
+	}
+}
