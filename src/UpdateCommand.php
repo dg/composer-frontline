@@ -9,12 +9,14 @@ declare(strict_types=1);
 namespace DG\ComposerFrontline;
 
 use Composer\Command\BaseCommand;
-use Composer\Composer;
+use Composer\DependencyResolver\Pool;
 use Composer\Factory;
 use Composer\Json\JsonFile;
 use Composer\Json\JsonManipulator;
+use Composer\Package\Package;
 use Composer\Package\Version\VersionParser;
 use Composer\Package\Version\VersionSelector;
+use Composer\Plugin\PluginInterface;
 use Composer\Repository\CompositeRepository;
 use Composer\Repository\PlatformRepository;
 use Composer\Repository\RepositorySet;
@@ -30,6 +32,12 @@ class UpdateCommand extends BaseCommand
 	private const ARGUMENT_SHORTCUTS = [
 		'nette' => ['nette/*', 'tracy/*', 'latte/*'],
 	];
+
+	/** @var VersionSelector */
+	private $versionSelector;
+
+	/** @var ?string */
+	private $phpVersion;
 
 
 	protected function configure()
@@ -71,15 +79,14 @@ class UpdateCommand extends BaseCommand
 
 	private function updatePackages(array $composerDefinition, array $masks): array
 	{
-		$composer = $this->getComposer();
-		$versionSelector = $this->createVersionSelector($composer);
+		$this->initializeVersionSelector();
 		$versionParser = new VersionParser;
 		$res = [];
 
 		foreach (['require', 'require-dev'] as $requireKey) {
 			foreach ($composerDefinition[$requireKey] ?? [] as $packageName => $constraintStr) {
 				if (
-					PlatformRepository::isPlatformPackage($packageName)
+					preg_match(PlatformRepository::PLATFORM_PACKAGE_REGEX, $packageName) // isPlatformPackage()
 					|| !self::matchesMask($masks, $packageName)
 					|| substr($constraintStr, 0, 3) === 'dev'
 				) {
@@ -87,7 +94,7 @@ class UpdateCommand extends BaseCommand
 				}
 
 				$constraint = $versionParser->parseConstraints($constraintStr);
-				$latestPackage = $versionSelector->findBestCandidate($packageName);
+				$latestPackage = $this->findBestCandidate($packageName);
 
 				if (
 					!$latestPackage
@@ -96,7 +103,7 @@ class UpdateCommand extends BaseCommand
 					continue;
 				}
 
-				$newConstraint = $versionSelector->findRecommendedRequireVersion($latestPackage);
+				$newConstraint = $this->versionSelector->findRecommendedRequireVersion($latestPackage);
 				$res[] = [$requireKey, $packageName, $constraintStr, $newConstraint];
 			}
 		}
@@ -133,15 +140,31 @@ class UpdateCommand extends BaseCommand
 	}
 
 
-	private function createVersionSelector(Composer $composer): VersionSelector
+	private function initializeVersionSelector(): void
 	{
-		$repositorySet = new RepositorySet($composer->getPackage()->getMinimumStability(), $composer->getPackage()->getStabilityFlags());
-		$repositorySet->addRepository(new CompositeRepository($composer->getRepositoryManager()->getRepositories()));
-
+		$composer = $this->getComposer();
 		$platformOverrides = $composer->getConfig()->get('platform') ?: [];
 		$platformRepo = new PlatformRepository([], $platformOverrides);
 
-		return new VersionSelector($repositorySet, $platformRepo);
+		if (version_compare(PluginInterface::PLUGIN_API_VERSION, '2', '<')) {
+			$this->phpVersion = $platformRepo->findPackage('php', '*')->getVersion();
+			$set = new Pool($composer->getPackage()->getMinimumStability(), $composer->getPackage()->getStabilityFlags());
+			$set->addRepository(new CompositeRepository($composer->getRepositoryManager()->getRepositories()));
+			$this->versionSelector = new VersionSelector($set);
+
+		} else {
+			$set = new RepositorySet($composer->getPackage()->getMinimumStability(), $composer->getPackage()->getStabilityFlags());
+			$set->addRepository(new CompositeRepository($composer->getRepositoryManager()->getRepositories()));
+			$this->versionSelector = new VersionSelector($set, $platformRepo);
+		}
+	}
+
+
+	private function findBestCandidate(string $packageName): ?Package
+	{
+		return version_compare(PluginInterface::PLUGIN_API_VERSION, '2', '<')
+			? $this->versionSelector->findBestCandidate($packageName, null, $this->phpVersion)
+			: $this->versionSelector->findBestCandidate($packageName);
 	}
 
 
