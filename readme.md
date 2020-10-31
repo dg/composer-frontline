@@ -41,7 +41,7 @@ latte/latte         ^1.6  →  ^2.8
 ```
 
 This will upgrade all the version hints in the composer.json file, in `require` and `require-dev` sections. It only modifies composer.json file.
-So run `composer install` to update your packages.
+So run `composer update` to update your packages.
 
 You can also update only specific packages using names and wildcards:
 
