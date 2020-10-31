@@ -81,6 +81,7 @@ class UpdateCommand extends BaseCommand
 				if (
 					PlatformRepository::isPlatformPackage($packageName)
 					|| !self::matchesMask($masks, $packageName)
+					|| substr($constraintStr, 0, 3) === 'dev'
 				) {
 					continue;
 				}
