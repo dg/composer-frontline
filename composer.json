@@ -24,7 +24,7 @@
 		"classmap": ["src/"]
 	},
 	"scripts": {
-		"phpstan": "phpstan analyse",
+		"phpstan": "phpstan analyse src",
 		"tester": "tester tests -s"
 	},
 	"extra": {
