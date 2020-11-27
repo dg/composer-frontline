@@ -97,6 +97,20 @@ class UpdateCommand extends BaseCommand
 				$latestPackage = $this->findBestCandidate($packageName);
 
 				if (
+					($exact = getenv('FRONTLINE_EXACT')) !== false
+					&& $latestPackage
+					&& $constraintStr !== $latestPackage->getVersion()
+				) {
+					$res[] = [
+						$requireKey, $packageName, $constraintStr,
+						$exact === '1'
+							? $latestPackage->getPrettyVersion()
+							: $this->versionSelector->findRecommendedRequireVersion($latestPackage)
+					];
+					continue;
+				}
+
+				if (
 					!$latestPackage
 					|| $constraint->matches(new Constraint('=', $latestPackage->getVersion()))
 				) {

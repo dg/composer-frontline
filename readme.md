@@ -50,4 +50,10 @@ composer frontline  nette/*
 composer frontline  doctrine/* symfony/console
 ```
 
+You can use exact version (`FRONTLINE_EXACT=1`), for reverting to constraint version use `FRONTLINE_EXACT=0`:
+
+```shell
+export FRONTLINE_EXACT=1 && composer frontline
+```
+
 Make sure your composer.json file is in version control and all changes have been committed. This will overwrite your composer.json file.
