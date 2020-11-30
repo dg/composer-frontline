@@ -9,7 +9,10 @@ declare(strict_types=1);
 namespace DG\ComposerFrontline;
 
 use Composer\Command\BaseCommand;
+use Composer\DependencyResolver\DefaultPolicy;
 use Composer\DependencyResolver\Pool;
+use Composer\DependencyResolver\Request;
+use Composer\DependencyResolver\Solver;
 use Composer\Factory;
 use Composer\Json\JsonFile;
 use Composer\Json\JsonManipulator;
@@ -52,6 +55,10 @@ class UpdateCommand extends BaseCommand
 
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
+		echo 'jo';
+		$this->update2();
+		return 0;
+
 		$jsonFile = new JsonFile(Factory::getComposerFile());
 		if (!$jsonFile->exists()) {
 			$this->getIO()->writeError('Could not find your composer.json file!');
@@ -74,6 +81,76 @@ class UpdateCommand extends BaseCommand
 		$table->render();
 
 		return 0;
+	}
+
+
+	private function update2()
+	{
+		$composer = $this->getComposer();
+		$rootPackage = $composer->getPackage();
+		/*$rootPackage->setRequires()
+		foreach ($rootPackage->getRequires() as $require) {
+			$require->
+		}*/
+
+		$policy = new DefaultPolicy(true);
+
+		$composer = $this->getComposer();
+		$platformOverrides = $composer->getConfig()->get('platform') ?: [];
+		$platformRepo = new PlatformRepository([], $platformOverrides);
+
+
+		$repositorySet = new RepositorySet($composer->getPackage()->getMinimumStability(), $composer->getPackage()->getStabilityFlags());
+		$repositorySet->addRepository(new CompositeRepository($composer->getRepositoryManager()->getRepositories()));
+
+		$request = new Request();
+		//$request->fixPackage($rootPackage);
+
+		$pool = $repositorySet->createPool($request, $this->getIO());
+
+		// solve dependencies
+		$solver = new Solver($policy, $pool, $this->getIO());
+		$lockTransaction = $solver->solve($request);
+		$ruleSetSize = $solver->getRuleSetSize();
+	}
+
+
+	private function createRepositorySet()
+	{
+
+
+
+		$minimumStability = $this->package->getMinimumStability();
+		$stabilityFlags = $this->package->getStabilityFlags();
+		$requires = array_merge($this->package->getRequires(), $this->package->getDevRequires());
+
+		$rootRequires = array();
+		foreach ($requires as $req => $constraint) {
+			// skip platform requirements from the root package to avoid filtering out existing platform packages
+			if ((true === $this->ignorePlatformReqs || (is_array($this->ignorePlatformReqs) && in_array($req, $this->ignorePlatformReqs, true))) && PlatformRepository::isPlatformPackage($req)) {
+				continue;
+			}
+			if ($constraint instanceof Link) {
+				$rootRequires[$req] = $constraint->getConstraint();
+			} else {
+				$rootRequires[$req] = $constraint;
+			}
+		}
+
+		$this->fixedRootPackage = clone $this->package;
+		$this->fixedRootPackage->setRequires(array());
+		$this->fixedRootPackage->setDevRequires(array());
+
+		$stabilityFlags[$this->package->getName()] = BasePackage::$stabilities[VersionParser::parseStability($this->package->getVersion())];
+
+		$repositorySet = new RepositorySet($minimumStability, $stabilityFlags, [], $this->package->getReferences(), $rootRequires);
+		$repositorySet->addRepository(new RootPackageRepository($this->fixedRootPackage));
+		$repositorySet->addRepository($platformRepo);
+		if ($this->additionalFixedRepository) {
+			$repositorySet->addRepository($this->additionalFixedRepository);
+		}
+
+		return $repositorySet;
 	}
 
 
