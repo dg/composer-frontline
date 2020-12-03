@@ -17,6 +17,7 @@ use Composer\Factory;
 use Composer\Json\JsonFile;
 use Composer\Json\JsonManipulator;
 use Composer\Package\Package;
+use Composer\Package\PackageInterface;
 use Composer\Package\Version\VersionParser;
 use Composer\Package\Version\VersionSelector;
 use Composer\Plugin\PluginInterface;
@@ -237,7 +238,7 @@ class UpdateCommand extends BaseCommand
 	}
 
 
-	private function findBestCandidate(string $packageName): ?Package
+	private function findBestCandidate(string $packageName): ?PackageInterface
 	{
 		return version_compare(PluginInterface::PLUGIN_API_VERSION, '2', '<')
 			? $this->versionSelector->findBestCandidate($packageName, null, $this->phpVersion)
