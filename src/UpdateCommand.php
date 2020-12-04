@@ -171,13 +171,33 @@ class UpdateCommand extends BaseCommand
 					continue;
 				}
 
-				$constraint = $versionParser->parseConstraints($constraintStr);
-				$latestPackage = $this->findBestCandidate($packageName);
+				if (!$latestPackage = $this->findBestCandidate($packageName)) {
+					continue;
+				}
 
-				if (
-					!$latestPackage
-					|| $constraint->matches(new Constraint('=', $latestPackage->getVersion()))
-				) {
+				if (($exact = getenv('FRONTLINE_EXACT')) !== false) {
+					if (
+						$exact === '1'
+						&& $constraintStr !== $latestPackage->getPrettyVersion()
+					) {
+						$exactStr = $latestPackage->getPrettyVersion();
+						$res[] = [$requireKey, $packageName, $constraintStr, $exactStr];
+						continue;
+					}
+
+					if (
+						$exact === '0'
+						&& $constraintStr !== $this->versionSelector->findRecommendedRequireVersion($latestPackage)
+					) {
+						$newConstraint = $this->versionSelector->findRecommendedRequireVersion($latestPackage);
+						$res[] = [$requireKey, $packageName, $constraintStr, $newConstraint];
+						continue;
+					}
+				}
+
+				$constraint = $versionParser->parseConstraints($constraintStr);
+
+				if ($constraint->matches(new Constraint('=', $latestPackage->getVersion()))) {
 					continue;
 				}
 
