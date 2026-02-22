@@ -1,10 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
 /**
  * Copyright (c) 2020 David Grudl (https://davidgrudl.com)
  */
-
-declare(strict_types=1);
 
 namespace DG\ComposerFrontline;
 
